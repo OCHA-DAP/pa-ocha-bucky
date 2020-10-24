@@ -119,17 +119,11 @@ parser.add_argument(
 
 # Shape file information
 parser.add_argument(
-    "--adm1_col",
-    default="STATEFP",
-    type=str,
-    help="Shapefile adm1 column name",
+    "--adm1_col", default="STATEFP", type=str, help="Shapefile adm1 column name",
 )
 
 parser.add_argument(
-    "--adm2_col",
-    default="GEOID",
-    type=str,
-    help="Shapefile adm2 column name",
+    "--adm2_col", default="GEOID", type=str, help="Shapefile adm2 column name",
 )
 
 # Can pass in a lookup table to use in place of graph
@@ -558,7 +552,7 @@ if __name__ == "__main__":
 
         # Rename join column
         if adm1_col_name != "adm1":
-            shape_data = shape_data.rename(columns={adm1_col_name : "adm1"})
+            shape_data = shape_data.rename(columns={adm1_col_name: "adm1"})
 
         # Column management - adm1/2 vals should be integers only
         shape_data["adm1"] = shape_data["adm1"].apply(remove_chars).astype(int)
@@ -600,7 +594,9 @@ if __name__ == "__main__":
             adm2_shape_data = adm2_shape_data.rename(columns={adm1_col_name: "adm1"})
 
         # Cast to int
-        adm2_shape_data["adm1"] = adm2_shape_data["adm1"].apply(remove_chars).astype(int)
+        adm2_shape_data["adm1"] = (
+            adm2_shape_data["adm1"].apply(remove_chars).astype(int)
+        )
         adm2_shape_data = adm2_shape_data.assign(
             adm2=adm2_shape_data[adm2_col_name].apply(remove_chars).astype(int)
         )
@@ -610,10 +606,12 @@ if __name__ == "__main__":
 
         # Rename join column
         if adm1_col_name != "adm1":
-            adm1_shape_data = adm1_shape_data.rename(columns={adm1_col_name : "adm1"})
+            adm1_shape_data = adm1_shape_data.rename(columns={adm1_col_name: "adm1"})
 
         # Cast to int
-        adm1_shape_data["adm1"] = adm1_shape_data["adm1"].apply(remove_chars).astype(int)
+        adm1_shape_data["adm1"] = (
+            adm1_shape_data["adm1"].apply(remove_chars).astype(int)
+        )
 
         make_adm1_maps(
             adm2_shape_df=adm2_shape_data,

@@ -4,6 +4,7 @@ import contextlib
 import copy
 import importlib
 import logging
+
 # import lz4.frame
 import lzma  # lzma is slow but reallllly gets that file size down...
 import os
@@ -43,11 +44,12 @@ class dotdict(dict):
 
 
 def remove_chars(seq):
-    seq_type= type(seq)
+    seq_type = type(seq)
     if seq_type != str:
         return seq
     else:
         return seq_type().join(filter(seq_type.isdigit, seq))
+
 
 def map_np_array(a, d):
     n = np.ndarray(a.shape)
@@ -101,6 +103,7 @@ def unpack_cache(cache_file):
         os.makedirs(os.path.dirname(new_file), exist_ok=True)
         with open(new_file, "wb") as f:
             f.write(tmp[fname])
+
 
 def _banner():
     print(r" ____             _          ")

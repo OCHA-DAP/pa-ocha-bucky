@@ -19,6 +19,7 @@ ADD_AMERICAN_SAMOA = False
 # CSSE UIDs for Michigan prison information
 MI_PRISON_UIDS = [84070004, 84070005]
 
+
 def get_timeseries_data(col_name, filename, fips_key="FIPS", is_csse=True):
     """Takes a historical data file and reduces it to a dataframe with FIPs, 
     date, and case or death data.
@@ -152,7 +153,11 @@ def distribute_unallocated_csse(confirmed_file, deaths_file, hist_df):
     )
 
     # Iterate over states in historical data
-    for state_fips in tqdm.tqdm(extra_cases.index.values, desc='Distributing unallocated state data', dynamic_ncols=True):
+    for state_fips in tqdm.tqdm(
+        extra_cases.index.values,
+        desc="Distributing unallocated state data",
+        dynamic_ncols=True,
+    ):
 
         # Get extra cases and deaths
         state_extra_cases = extra_cases.xs(state_fips)
@@ -217,13 +222,22 @@ def distribute_data_by_population(total_df, dist_vect, data_to_dist, replace):
 
     # Use population fraction to scale
     if replace:
-        tmp = tmp.assign(cumulative_reported_cases=tmp["pop_fraction"] * tmp["cumulative_reported_cases_y"])
-        tmp = tmp.assign(cumulative_deaths=tmp["pop_fraction"] * tmp["cumulative_deaths_y"])
+        tmp = tmp.assign(
+            cumulative_reported_cases=tmp["pop_fraction"]
+            * tmp["cumulative_reported_cases_y"]
+        )
+        tmp = tmp.assign(
+            cumulative_deaths=tmp["pop_fraction"] * tmp["cumulative_deaths_y"]
+        )
     else:
         tmp = tmp.assign(
-            cumulative_reported_cases=tmp["cumulative_reported_cases_x"] + tmp["pop_fraction"] * tmp["cumulative_reported_cases_y"]
+            cumulative_reported_cases=tmp["cumulative_reported_cases_x"]
+            + tmp["pop_fraction"] * tmp["cumulative_reported_cases_y"]
         )
-        tmp = tmp.assign(cumulative_deaths=tmp["cumulative_deaths_x"] + tmp["pop_fraction"] * tmp["cumulative_deaths_y"])
+        tmp = tmp.assign(
+            cumulative_deaths=tmp["cumulative_deaths_x"]
+            + tmp["pop_fraction"] * tmp["cumulative_deaths_y"]
+        )
 
     # Discard merge columns
     tmp = tmp[["FIPS", "date", "cumulative_reported_cases", "cumulative_deaths"]]
@@ -459,8 +473,8 @@ def process_csse_data():
     deaths = get_timeseries_data("Deaths", deaths_file)
 
     # rename columns
-    confirmed.rename(columns={'Confirmed':'cumulative_reported_cases'}, inplace=True)
-    deaths.rename(columns={'Deaths':'cumulative_deaths'}, inplace=True)
+    confirmed.rename(columns={"Confirmed": "cumulative_reported_cases"}, inplace=True)
+    deaths.rename(columns={"Deaths": "cumulative_deaths"}, inplace=True)
 
     # Merge datasets
     data = pd.merge(confirmed, deaths, on=["FIPS", "date"], how="left").fillna(0)
@@ -522,7 +536,7 @@ def update_covid_tracking_data():
 
     # Rename FIPS
     df.rename(columns={"fips": "adm1"}, inplace=True)
-    
+
     # Save
     covid_tracking_name = bucky_cfg["data_dir"] + "/cases/covid_tracking.csv"
     logging.info("Saving COVID Tracking Data as %s" % covid_tracking_name)
@@ -567,7 +581,11 @@ def process_usafacts(case_file, deaths_file):
         ts = ts.loc[~ts["FIPS"].isin([0, 1])]
         ts.set_index(["FIPS", "date"], inplace=True)
 
-        for state_code, state_df in tqdm.tqdm(df.groupby("stateFIPS"), desc='Processing USAFacts ' + cols[i], dynamic_ncols=True):
+        for state_code, state_df in tqdm.tqdm(
+            df.groupby("stateFIPS"),
+            desc="Processing USAFacts " + cols[i],
+            dynamic_ncols=True,
+        ):
 
             # DC has no unallocated row
             if state_df.loc[state_df["countyFIPS"] == 0].empty:
