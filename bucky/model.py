@@ -9,7 +9,8 @@ import sys
 import warnings
 from collections import defaultdict, deque
 from functools import lru_cache, partial
-from pprint import pformat  # TODO set some defaults for width/etc with partial?
+from pprint import \
+    pformat  # TODO set some defaults for width/etc with partial?
 
 import networkx as nx
 import numpy as np
@@ -18,15 +19,10 @@ import tqdm
 
 from .arg_parser_model import parser
 from .npi import read_npi_file
+from .numerical_libs import use_cupy
 from .parameters import buckyParams
-from .util import (
-    TqdmLoggingHandler,
-    _banner,
-    cache_files,
-    date_to_t_int,
-    dotdict,
-    map_np_array,
-)
+from .util import (TqdmLoggingHandler, _banner, cache_files, date_to_t_int,
+                   dotdict, map_np_array)
 from .util.distributions import mPERT_sample, truncnorm
 
 # supress pandas warning caused by pyarrow
@@ -34,7 +30,6 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 # TODO we do alot of allowing div by 0 and then checking for nans later, we should probably refactor that
 warnings.simplefilter(action="ignore", category=RuntimeWarning)
 
-from .numerical_libs import use_cupy
 
 if __name__ == "__main__":
     args = parser.parse_args()

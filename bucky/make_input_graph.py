@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from .util import estimate_IFR, TqdmLoggingHandler
+from .util import TqdmLoggingHandler, estimate_IFR
 from .util.read_config import bucky_cfg
 from .util.update_data_repos import update_repos
 

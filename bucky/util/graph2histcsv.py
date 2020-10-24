@@ -1,8 +1,9 @@
-import pandas as pd
-import numpy as np
-import networkx as nx
 import argparse
 import pickle
+
+import networkx as nx
+import numpy as np
+import pandas as pd
 
 parser = argparse.ArgumentParser(description='Create CSSE style case/death history file from the data on a pickled Bucky graph')
 parser.add_argument('graph', type=str, help='graph to read from')

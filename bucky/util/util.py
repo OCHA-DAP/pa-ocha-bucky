@@ -4,7 +4,6 @@ import contextlib
 import copy
 import importlib
 import logging
-
 # import lz4.frame
 import lzma  # lzma is slow but reallllly gets that file size down...
 import os

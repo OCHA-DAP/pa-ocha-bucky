@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def logistic(x, x0=0.0, k=1.0, L=1.0):
     """
     

@@ -3,13 +3,15 @@
 # I'd recommend not linting this file, we're really abusing the import system and variable scoping 
 # here and linters don't like it...
 
+import contextlib
+
+import numpy as xp
 # Default imports for cpu code
 # This will be overwritten with a call to .numerical_libs.use_cupy()
 import scipy.integrate._ivp.ivp as ivp
-import numpy as xp
 import scipy.sparse as sparse
+
 xp.scatter_add = xp.add.at
-import contextlib
 xp.optimize_kernels = contextlib.nullcontext
 xp.to_cpu = lambda x, **kwargs: x # one arg noop
 
