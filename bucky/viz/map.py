@@ -3,6 +3,7 @@ import glob
 import os
 import sys
 from datetime import timedelta
+import logging
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -501,11 +502,11 @@ if __name__ == "__main__":
     # Check all required parameters are passed in depending on requested maps
     if args.adm0 and args.adm1_shape is None:
 
-        print("Error: ADM1 shapefiles are required for ADM0 maps.")
+        logging.error("Error: ADM1 shapefiles are required for ADM0 maps.")
         sys.exit()
 
     if (args.adm1 or args.all_adm1) and args.adm2_shape is None:
-        print("Error: ADM2 shapefiles are required for ADM1 maps.")
+        logging.error("Error: ADM2 shapefiles are required for ADM1 maps.")
         sys.exit()
 
     # Parse other arguments
@@ -527,7 +528,7 @@ if __name__ == "__main__":
 
         if cmap not in plt.colormaps():
 
-            print(
+            logging.error(
                 "Error: "
                 + cmap
                 + " is not a valid matplotlib colormap. Defaulting to: "

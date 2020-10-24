@@ -13,7 +13,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.stats
-from tqdm import tqdm
+import tqdm
 
 from ..util.read_config import bucky_cfg
 from ..util.get_historical_data import get_historical_data
@@ -212,7 +212,7 @@ def plot(
     else:
         unique_areas = unique_lookup_areas
 
-    for area in tqdm(unique_areas, total=len(unique_areas)):
+    for area in tqdm.tqdm(unique_areas, total=len(unique_areas), desc="Plotting " + key, dynamic_ncols=True):
 
         # Get name
         name = lookup_df.loc[lookup_df[key] == area][key + "_name"].values[0]
@@ -298,9 +298,7 @@ def plot(
                     axs[i].set_xlim(actuals["date"].min(), dates.max())
                     # axs[i].scatter(actual_dates[ind:], actual_vals[ind:], label='Historical data', color='b')
                 else:
-                    
-                    print(plot_columns[i])
-                    logging.warning("Historical data missing for area: " + name)
+                    logging.warning("Historical data missing for area: " + name + ", column=" + plot_columns[i])
 
             axs[i].grid(True)
             axs[i].legend()
@@ -459,7 +457,7 @@ if __name__ == "__main__":
 
     # Logging
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.WARNING,
         stream=sys.stdout,
         format="%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
     )

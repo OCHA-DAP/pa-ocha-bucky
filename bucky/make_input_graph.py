@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from .util import estimate_IFR
+from .util import estimate_IFR, TqdmLoggingHandler
 from .util.read_config import bucky_cfg
 from .util.update_data_repos import update_repos
 
@@ -41,11 +41,21 @@ parser.add_argument(
     type=str,
     help="Directory for graph file. Defaults to data/input_graphs/",
 )
+
 parser.add_argument(
     "--hist_file",
     default=bucky_cfg["data_dir"] + "/cases/csse_hist_timeseries.csv",
     type=str,
     help="File to use for historical data",
+)
+
+parser.add_argument(
+    "-v",
+    "--verbose",
+    action="count",
+    dest="verbosity",
+    default=0,
+    help="verbose output (repeat for increased verbosity; defaults to WARN, -v is INFO, -vv is DEBUG)",
 )
 
 parser.add_argument("--no_update", action="store_false", help="Skip updating data")
@@ -83,7 +93,7 @@ def get_case_history(historical_data, end_date, num_days=DAYS_OF_HIST):
         "Getting " + str(num_days) + " days of case/death data for each county..."
     )
 
-    for fips, group in tqdm.tqdm(historical_data.groupby("adm2")):
+    for fips, group in tqdm.tqdm(historical_data.groupby("adm2"), desc="Grabbing adm2 histories", dynamic_ncols=True):
 
         # Get block of data
         block = group.loc[(group["date"] >= start_date) & (group["date"] <= end_date)]
@@ -296,7 +306,8 @@ def get_lex(last_date, window_size=7):
     lex_df = None
     success = 0
     d = 0
-    while success < window_size:  # d in tqdm.trange(window_size):
+    pbar = tqdm.tqdm(total=window_size, desc='Getting historical LEX', dynamic_ncols=True)
+    while success < window_size:
         date = datetime.date.fromisoformat(last_date) - datetime.timedelta(days=d)
         date_str = date.isoformat()
         logging.info(date_str)
@@ -315,6 +326,7 @@ def get_lex(last_date, window_size=7):
                     tmp_df, left_index=True, right_index=True, how="outer"
                 )
             success += 1
+            pbar.update(1)
         except FileNotFoundError as e:
             # print(e)
             continue
@@ -345,7 +357,8 @@ def get_safegraph(last_date, window_size=7):
     sg_df = None
     success = 0
     d = 0
-    while success < window_size:  # for d in tqdm.trange(window_size):
+    pbar = tqdm.tqdm(total=window_size, desc='Getting historical SG', dynamic_ncols=True)
+    while success < window_size:
 
         date = datetime.date.fromisoformat(last_date) - datetime.timedelta(days=d)
         date_str = date.isoformat()
@@ -368,6 +381,7 @@ def get_safegraph(last_date, window_size=7):
                 )
             logging.info("using sg data from " + date_str)
             success += 1
+            pbar.update(1)
         except FileNotFoundError:
             continue
 
@@ -457,15 +471,18 @@ def get_mobility_data(popdens, end_date, age_data, add_territories=True):
 
 if __name__ == "__main__":
 
-    # Logging
-    logging.basicConfig(
-        level=logging.INFO,
-        stream=sys.stdout,
-        format="%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
-    )
-
     # Parse cli args
     args = parser.parse_args()
+
+    loglevel = 30 - 10 * min(args.verbosity, 2)
+
+    # Logging
+    logging.basicConfig(
+        level=loglevel,
+        format="%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
+        handlers=[TqdmLoggingHandler()],
+    )
+
     logging.info(args)
 
     # Define some parameters
@@ -654,7 +671,7 @@ if __name__ == "__main__":
     # Create edges
     logging.info("Creating edges...")
     edges = []
-    for index, row in tqdm.tqdm(data.iterrows(), total=len(data)):
+    for index, row in tqdm.tqdm(data.iterrows(), total=len(data), desc='Creating neighboring edges', dynamic_ncols=True):
 
         # Determine which counties touch
         neighbors = data[data.geometry.touches(row["geometry"])].adm2.to_numpy()
@@ -730,7 +747,7 @@ if __name__ == "__main__":
     G2.update(nodes=G.nodes(data=True))
 
     logging.info("Finalizing edge weights...")
-    for u, v, d in tqdm.tqdm(G.edges(data=True), total=len(G.edges)):
+    for u, v, d in tqdm.tqdm(G.edges(data=True), total=len(G.edges), desc='Finalizing edges', dynamic_ncols=True):
 
         G2[u][v]["weight"] += d["weight"]
         if (u, v) in move_dict:

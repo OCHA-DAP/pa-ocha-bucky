@@ -1,15 +1,15 @@
 ---
-model_struct:
+consts:
   En: 3
   Im: 2
   Rhn: 3
   age_bins: [[0,4], [5,9], [10, 14], [15, 19], [20,24], [25,29], [30,34], [35,39], [40,44], [45, 49], [50,54], [55,59], [60, 64], [65,69], [70,74], [74,120]]
 
-D:
-  # This isn't used if we have enough case data
-  mean: 5.5
-  CI: [3.5, 7.5]
-  clip: [0, null]
+  reroll_variance: 0.12
+  doubling_t_window: 7
+  doubling_t_N_historical_days: 3
+  case_reporting_min_deaths: 100.
+  case_reporting_N_historical_days: 7
 
 Tg: 
   # Mean generation interval
@@ -84,3 +84,10 @@ D_REPORT_TIME:
   values: [7.1, 7.2, 6.6]
   stddev: [7.7, 7.7, 7.3]
   clip: [0., null]
+
+D:
+  # NB: This isn't used anymore
+  # Doubling time (this is now calced from data but the way parameters.py works means it needs an initial value. it will be refactored out)
+  mean: 150
+  CI: [130.5, 170.5]
+  clip: [0, null]

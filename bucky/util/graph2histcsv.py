@@ -35,4 +35,4 @@ df['date'] = df.date.map({i:v for i,v in enumerate(dates)})
 
 df.to_csv(args.output_file, index=False)
 
-print(df.groupby('date').sum().diff().tail())
+#print(df.groupby('date').sum().diff().tail())

@@ -26,7 +26,7 @@ def use_cupy(optimize=False):
     import logging
     cupy_spec = importlib.util.find_spec("cupy")
     if cupy_spec is None:
-        logging.warn("CuPy not found, reverting to cpu/numpy")
+        logging.info("CuPy not found, reverting to cpu/numpy")
         return 1
 
     global xp, ivp, sparse

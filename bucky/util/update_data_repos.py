@@ -8,7 +8,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+import tqdm
 
 from .read_config import bucky_cfg
 
@@ -152,7 +152,7 @@ def distribute_unallocated_csse(confirmed_file, deaths_file, hist_df):
     )
 
     # Iterate over states in historical data
-    for state_fips in tqdm(extra_cases.index.values):
+    for state_fips in tqdm.tqdm(extra_cases.index.values, desc='Distributing unallocated state data', dynamic_ncols=True):
 
         # Get extra cases and deaths
         state_extra_cases = extra_cases.xs(state_fips)
@@ -426,7 +426,6 @@ def distribute_territory_data(df, add_american_samoa):
             }
         )
         as_frame.set_index(["FIPS", "date"], inplace=True)
-        print(as_frame)
         df = df.append(as_frame)
 
     return df
@@ -568,7 +567,7 @@ def process_usafacts(case_file, deaths_file):
         ts = ts.loc[~ts["FIPS"].isin([0, 1])]
         ts.set_index(["FIPS", "date"], inplace=True)
 
-        for state_code, state_df in tqdm(df.groupby("stateFIPS")):
+        for state_code, state_df in tqdm.tqdm(df.groupby("stateFIPS"), desc='Processing USAFacts ' + cols[i], dynamic_ncols=True):
 
             # DC has no unallocated row
             if state_df.loc[state_df["countyFIPS"] == 0].empty:

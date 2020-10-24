@@ -14,11 +14,11 @@ from pprint import pformat  # TODO set some defaults for width/etc with partial?
 import networkx as nx
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+import tqdm
 
 from .arg_parser_model import parser
 from .npi import read_npi_file
-from .parameters import seir_params
+from .parameters import buckyParams
 from .util import (
     TqdmLoggingHandler,
     _banner,
@@ -44,24 +44,13 @@ if __name__ == "__main__":
 
 from .numerical_libs import xp, ivp, sparse # isort:skip
 
-#
-# Params TODO move all this to arg_parser or elsewhere
-#
-OUTPUT = True # TODO is this really even used anymore?
-
-# TODO move to param file
-RR_VAR = 0.12  # variance to use for MC of params with no CI
-
-
 class SimulationException(Exception):
     pass
-
 
 @lru_cache(maxsize=None)
 def get_runid(pid=0):
     start = datetime.datetime.now()
     return str(start).replace(" ", "__").replace(":", "_").split(".")[0]
-
 
 class SEIR_covid(object):
     def __init__(self, seed=None, randomize_params_on_reset=True):
@@ -92,14 +81,14 @@ class SEIR_covid(object):
             cache_files(files, self.run_id)
 
         # disease params
-        self.s_par = seir_params(args.par_file, args.gpu)
-        self.model_struct = self.s_par.generate_params(None)["model_struct"]
+        self.bucky_params = buckyParams(args.par_file, args.gpu)
+        self.consts = self.bucky_params.consts
 
         #global Si, Ei, Ii, Ici, Iasi, Ri, Rhi, Di, Iai, Hi, Ci, N_compartments, En, Im, Rhn, incH, incC
         state_indices = {}
-        state_indices['En'] = self.model_struct["En"]
-        state_indices['Im'] = self.model_struct["Im"]
-        state_indices['Rhn'] = self.model_struct["Rhn"]
+        state_indices['En'] = self.consts["En"]
+        state_indices['Im'] = self.consts["Im"]
+        state_indices['Rhn'] = self.consts["Rhn"]
         state_indices['Si'] = 0
         state_indices['Ei'] = xp.array(state_indices['Si'] + 1 + xp.arange(state_indices['En']), dtype=int)
         state_indices['Ii'] = xp.array(state_indices['Ei'][-1] + 1 + xp.arange(state_indices['Im']), dtype=int)
@@ -122,7 +111,7 @@ class SEIR_covid(object):
 
         self.get_state_indices()
 
-    # We really need to refactor things so we don't ahve to do this...
+    # We really need to refactor things so we don't have to do this...
     def get_state_indices(self):       
         for k in self.state_indices:
             globals()[k] = self.state_indices[k]
@@ -311,7 +300,8 @@ class SEIR_covid(object):
                 df = death_df.set_index(['date','adm1']).merge(case_df.set_index(['date','adm1']), left_index=True, right_index=True).reset_index()
 
                 self.adm1_current_cfr = xp.zeros((self.adm1_max + 1,), dtype=float)
-                cfr_delay = 20
+                cfr_delay = 20 # TODO this should be calced from D_REPORT_TIME*Nij
+                # TODO make a function that will take a 'floating point index' and return the fractional part of the non int (we do this multiple other places while reading over historical data, e.g. case_hist[-Ti:] during init)
 
                 for adm1, g in df.groupby("adm1"):
                     g_df = (
@@ -340,11 +330,11 @@ class SEIR_covid(object):
 
         # randomize model params if we're doing that kind of thing
         if self.randomize:
-            self.reset_A(RR_VAR)
-            self.params = self.s_par.generate_params(RR_VAR)
+            self.reset_A(self.consts.reroll_variance)
+            self.params = self.bucky_params.generate_params(self.consts.reroll_variance)
 
         else:
-            self.params = self.s_par.generate_params(None)
+            self.params = self.bucky_params.generate_params(None)
 
         if params is not None:
             self.params = copy.deepcopy(params)
@@ -387,7 +377,7 @@ class SEIR_covid(object):
             adm1_F_fac = self.adm1_current_cfr / adm1_F
             adm1_F_fac[xp.isnan(adm1_F_fac)] = 1.0
 
-            F_RR_fac = truncnorm(xp, 1.0, RR_VAR, size=adm1_F_fac.size, a_min=1e-6)
+            F_RR_fac = truncnorm(xp, 1.0, self.consts.reroll_variance, size=adm1_F_fac.size, a_min=1e-6)
             adm1_F_fac = adm1_F_fac * F_RR_fac
             adm1_F_fac = xp.clip(
                 adm1_F_fac, a_min=0.1, a_max=10.0
@@ -397,20 +387,21 @@ class SEIR_covid(object):
             self.params.F = xp.clip(self.params.F, a_min=1.0e-10, a_max=1.0)
             self.params.H = xp.clip(self.params.H, a_min=self.params.F, a_max=1.0)
 
+        #crr_days_needed = max( #TODO this depends on all the Td params, and D_REPORT_TIME...
         case_reporting = xp.to_cpu(
-            self.estimate_reporting(cfr=self.params.F, days_back=22)
+            self.estimate_reporting(cfr=self.params.F, days_back=22, min_deaths=self.consts.case_reporting_min_deaths)
         )
         self.case_reporting = xp.array(
-            mPERT_sample(
+            mPERT_sample( # TODO these facs should go in param file
                 mu=xp.clip(case_reporting, a_min=0.2, a_max=1.0),
                 a=xp.clip(0.8 * case_reporting, a_min=0.2, a_max=None),
                 b=xp.clip(1.2 * case_reporting, a_min=None, a_max=1.0),
                 gamma=500.0,
             )
         )
-        #self.case_reporting = self.estimate_reporting(cfr=self.params.F, days_back=22)
 
-        self.doubling_t = self.estimate_doubling_time_WHO(mean_time_window=7)
+        self.doubling_t = self.estimate_doubling_time_WHO(doubling_time_window=self.consts.doubling_t_window,
+                                                      mean_time_window=self.consts.doubling_t_N_historical_days)
 
         if xp.any(~xp.isfinite(self.doubling_t)):
             logging.info("non finite doubling times, is there enough case data?")
@@ -418,19 +409,19 @@ class SEIR_covid(object):
             logging.debug(self.adm1_id[~xp.isfinite(self.doubling_t)])
             raise SimulationException
 
-        if RR_VAR > 0.0:
+        if self.consts.reroll_variance > 0.0:
             self.doubling_t *= truncnorm(
-                xp, 1.0, RR_VAR, size=self.doubling_t.shape, a_min=1e-6
+                xp, 1.0, self.consts.reroll_variance, size=self.doubling_t.shape, a_min=1e-6
             )
             self.doubling_t = xp.clip(self.doubling_t, 1.0, None)
 
-        self.params = self.s_par.rescale_doubling_rate(
+        self.params = self.bucky_params.rescale_doubling_rate(
             self.doubling_t, self.params, xp, self.A
         )
 
-        n_nodes = len(self.G.nodes())
+        n_nodes = len(self.G.nodes()) # TODO this should be refactored out...
 
-        mean_case_reporting = xp.mean(self.case_reporting[-7:], axis=0)
+        mean_case_reporting = xp.mean(self.case_reporting[-self.consts.case_reporting_N_historical_days:], axis=0)
 
         self.params["CASE_REPORT"] = mean_case_reporting
         self.params["THETA"] = xp.broadcast_to(
@@ -452,11 +443,12 @@ class SEIR_covid(object):
         current_I = (
             xp.sum(self.inc_case_hist[-int(Ti) :], axis=0)
             + (Ti % 1) * self.inc_case_hist[-int(Ti + 1)]
-        )
+        ) #TODO replace with util func
         current_I[xp.isnan(current_I)] = 0.0
         current_I[current_I < 0.0] = 0.0
         current_I *= 1.0 / (self.params["CASE_REPORT"])
 
+        # TODO should be in param file
         R_fac = xp.array(mPERT_sample(mu=0.5, a=0.25, b=0.75, gamma=50.0))
         E_fac = xp.array(mPERT_sample(mu=1.4, a=1.15, b=1.65, gamma=50.0))
         H_fac = xp.array(mPERT_sample(mu=1.0, a=0.9, b=1.1, gamma=100.0))
@@ -515,6 +507,7 @@ class SEIR_covid(object):
                 H_fac * self.params.H * adm2_hosp_frac[None, :], self.params.F, 1.0
             )
 
+            # TODO this .85 should be in param file...
             self.params["F_eff"] = xp.clip(
                 self.params["F"] / self.params["H"], 0.0, 1.0
             )
@@ -558,7 +551,7 @@ class SEIR_covid(object):
             )
             raise SimulationException
 
-        logging.debug("done reset")
+        logging.debug("done reset()")
 
         return y
 
@@ -579,13 +572,18 @@ class SEIR_covid(object):
             hist_doubling_t = xp.nanmean(doubling_t[-mean_time_window:], axis=0)
         return hist_doubling_t
 
+    # TODO these rollups to higher adm levels should be a util (it might make sense as a decorator)
+    # it shows up here, the CRR, the CHR rescaling, and in postprocess...
     def estimate_doubling_time(
         self,
-        days_back=14,
+        days_back=7, # TODO rename, its the number days calc the rolling Td
         doubling_time_window=7,
         mean_time_window=None,
         min_doubling_t=1.0,
     ):
+        if mean_time_window is not None:
+            days_back = mean_time_window
+
         cases = self.cum_case_hist[-days_back:] / self.case_reporting[-days_back:]
         cases_old = (
             self.cum_case_hist[
@@ -659,7 +657,7 @@ class SEIR_covid(object):
             )
 
         case_lag_int = int(case_lag)
-        case_lag_frac = case_lag % 1
+        case_lag_frac = case_lag % 1 # TODO replace with util function for the indexing
         cases_lagged = (
             self.cum_case_hist[-case_lag_int - days_back : -case_lag_int]
             + case_lag_frac
@@ -742,7 +740,7 @@ class SEIR_covid(object):
     #
 
     @staticmethod
-    def _dGdt_vec(t, y, Nij, contact_mats, Aij, par, npi):
+    def RHS_func(t, y, Nij, contact_mats, Aij, par, npi):
         # constraint on values
         lower, upper = (0.0, 1.0)  # bounds for state vars
 
@@ -775,7 +773,7 @@ class SEIR_covid(object):
         Cij = xp.sum(Cij, axis=1)
         Cij /= xp.sum(Cij, axis=2, keepdims=True)
 
-        Aij_eff = npi["mobility_reduct"][int(t)][..., None] * Aij
+        Aij_eff = npi["mobility_reduct"][int(t)][..., None] * Aij.T
 
         # perturb Aij
         # new_R0_fracij = truncnorm(xp, 1.0, .1, size=Aij.shape, a_min=1e-6)
@@ -842,9 +840,6 @@ class SEIR_covid(object):
 
         return dG
 
-    def dGdt_vec(self, t, y, Nij, Cij, Aij, par):
-        return self._dGdt_vec(t, y, Nij, Cij, Aij, par)
-
     def run_once(self, seed=None, outdir="raw_output/", output=True, output_queue=None):
 
         # reset everything
@@ -858,7 +853,7 @@ class SEIR_covid(object):
         logging.debug("Starting integration")
         t_eval = np.arange(0, self.t_max + self.dt, self.dt)
         sol = ivp.solve_ivp(
-            self._dGdt_vec,
+            self.RHS_func,
             method="RK23",
             t_span=(0.0, self.t_max),
             y0=self.y.reshape(-1),
@@ -913,7 +908,7 @@ class SEIR_covid(object):
         init_inc_death_mean = xp.mean(xp.sum(daily_deaths[:, 1:4], axis=0))
         hist_inc_death_mean = xp.mean(xp.sum(self.inc_death_hist[-7:], axis=-1))
 
-        inc_death_rejection_fac = 2.0  # 1.1
+        inc_death_rejection_fac = 2.0 # TODO These should come from the cli arg -r
         if (init_inc_death_mean > inc_death_rejection_fac * hist_inc_death_mean) or (
             inc_death_rejection_fac * init_inc_death_mean < hist_inc_death_mean
         ):
@@ -931,7 +926,7 @@ class SEIR_covid(object):
         init_inc_case_mean = xp.mean(xp.sum(daily_cases_reported[:, 1:4], axis=0))
         hist_inc_case_mean = xp.mean(xp.sum(self.inc_case_hist[-7:], axis=-1))
 
-        inc_case_rejection_fac = 2.0
+        inc_case_rejection_fac = 2.0 # TODO These should come from the cli arg -r
         if (init_inc_case_mean > inc_case_rejection_fac * hist_inc_case_mean) or (
             inc_case_rejection_fac * init_inc_case_mean < hist_inc_case_mean
         ):
@@ -1068,13 +1063,15 @@ if __name__ == "__main__":
         n_mc = args.n_mc
 
     total_start = datetime.datetime.now()
-    seed = 0
+    seed = 0 # TODO make init seed a cli arg
     success = 0
     times = []
-    pbar = tqdm(total=n_mc, dynamic_ncols=True)
+    pbar = tqdm.tqdm(total=n_mc, desc='Performing Monte Carlos', dynamic_ncols=True)
     try:
         while success < n_mc:
             start = datetime.datetime.now()
+            pbar.set_postfix({'seed' : seed})
+            pbar.refresh()
             try:
                 with xp.optimize_kernels():
                     env.run_once(

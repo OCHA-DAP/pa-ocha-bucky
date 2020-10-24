@@ -23,7 +23,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.stats
-from tqdm import tqdm
+import tqdm
 
 from .util.read_config import bucky_cfg
 from .viz.geoid import read_geoid_from_graph, read_lookup
@@ -387,7 +387,7 @@ if __name__ == "__main__":
             write_queue.put((os.path.join(output_dir, level + "_quantiles.csv"), q_df))
 
     pool = Pool(processes=args.nprocs)
-    for _ in tqdm(pool.imap_unordered(_process_date, dates), total=len(dates)):
+    for _ in tqdm.tqdm(pool.imap_unordered(_process_date, dates), total=len(dates), desc="Postprocessing dates", dynamic_ncols=True):
         pass
     pool.close()
     pool.join()  # wait until everything is done
@@ -401,7 +401,7 @@ if __name__ == "__main__":
     if not args.no_sort:
         for level in args.levels:
             fname = os.path.join(output_dir, level + "_quantiles.csv")
-            print("Sorting output file " + fname, end="... ")
+            logging.info("Sorting output file " + fname + "...")
             df = pd.read_csv(fname)
 
             #TODO we can avoid having to set index here once readable_column names is complete 
@@ -413,4 +413,4 @@ if __name__ == "__main__":
             # write out sorted csv
             df.drop(columns='index', inplace=True) # TODO where did we pick this up?
             df.to_csv(fname, index=True)
-            print(" Done")
+            logging.info("Done sort")

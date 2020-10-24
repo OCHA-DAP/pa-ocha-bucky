@@ -41,12 +41,13 @@ def CI_to_std(CI):
     return (upper + lower) / 2.0, (upper - lower) / std95 / 2.0
 
 
-class seir_params(object):
+class buckyParams(object):
     def __init__(self, par_file=None, gpu=False):
 
         self.par_file = par_file
         if par_file is not None:
             self.base_params = self.read_yml(par_file)
+            self.consts = dotdict(self.base_params['consts'])
         else:
             self.base_params = None
 
@@ -96,10 +97,10 @@ class seir_params(object):
                 # interp to our age bins
                 if (
                     base_params[p]["age_bins"]
-                    != base_params["model_struct"]["age_bins"]
+                    != base_params["consts"]["age_bins"]
                 ):
                     params[p] = self.age_interp(
-                        base_params["model_struct"]["age_bins"],
+                        base_params["consts"]["age_bins"],
                         base_params[p]["age_bins"],
                         params[p],
                     )
@@ -127,8 +128,8 @@ class seir_params(object):
     def rescale_doubling_rate(D, params, xp, A=None):
         r = xp.log(2.0) / D
         params["R0"] = calc_Reff(
-            params["model_struct"]["Im"],
-            params["model_struct"]["En"],
+            params["consts"]["Im"],
+            params["consts"]["En"],
             params["Tg"],
             params["Te"],
             r,
@@ -144,14 +145,14 @@ class seir_params(object):
         params["Te"] = calc_Te(
             params["Tg"],
             params["Ts"],
-            params["model_struct"]["En"],
+            params["consts"]["En"],
             params["frac_trans_before_sym"],
         )
-        params["Ti"] = calc_Ti(params["Te"], params["Tg"], params["model_struct"]["En"])
+        params["Ti"] = calc_Ti(params["Te"], params["Tg"], params["consts"]["En"])
         r = np.log(2.0) / params["D"]
         params["R0"] = calc_Reff(
-            params["model_struct"]["Im"],
-            params["model_struct"]["En"],
+            params["consts"]["Im"],
+            params["consts"]["En"],
             params["Tg"],
             params["Te"],
             r,
