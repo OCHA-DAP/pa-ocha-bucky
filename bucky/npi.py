@@ -37,8 +37,8 @@ def read_npi_file(fname, start_date, end_t, adm2_map, disable_npi=False):
     mask = (df["date"] >= str(start_date)) & (df["date"] <= str(end_date))
     # If npi file isn't up to date just use last known value
     if np.all(~mask):
-        max_npi_date = df['date'].max()
-        mask = df['date'] == max_npi_date
+        max_npi_date = df["date"].max()
+        mask = df["date"] == max_npi_date
 
     df = df.loc[mask]
 

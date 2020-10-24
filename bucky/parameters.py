@@ -47,7 +47,7 @@ class buckyParams(object):
         self.par_file = par_file
         if par_file is not None:
             self.base_params = self.read_yml(par_file)
-            self.consts = dotdict(self.base_params['consts'])
+            self.consts = dotdict(self.base_params["consts"])
         else:
             self.base_params = None
 
@@ -95,10 +95,7 @@ class buckyParams(object):
                 params[p] = np.array(base_params[p]["values"])
                 params[p] *= truncnorm(np, 1.0, var, size=params[p].shape, a_min=1e-6)
                 # interp to our age bins
-                if (
-                    base_params[p]["age_bins"]
-                    != base_params["consts"]["age_bins"]
-                ):
+                if base_params[p]["age_bins"] != base_params["consts"]["age_bins"]:
                     params[p] = self.age_interp(
                         base_params["consts"]["age_bins"],
                         base_params[p]["age_bins"],

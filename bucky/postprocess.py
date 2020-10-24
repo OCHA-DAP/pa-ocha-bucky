@@ -7,8 +7,16 @@ import os
 import pickle
 from datetime import timedelta
 from functools import partial
-from multiprocessing import (JoinableQueue, Pool, Process, Queue, RLock,
-                             cpu_count, current_process, set_start_method)
+from multiprocessing import (
+    JoinableQueue,
+    Pool,
+    Process,
+    Queue,
+    RLock,
+    cpu_count,
+    current_process,
+    set_start_method,
+)
 from pathlib import Path
 
 import networkx as nx
@@ -270,7 +278,11 @@ if __name__ == "__main__":
         tot_df = tot_df.loc[tot_df[admin2_key].isin(unique_adm2)]
 
         # List of columns that will be output per 100k population as well
-        per_capita_cols = ['cumulative_reported_cases', 'cumulative_deaths', 'current_hospitalizations']
+        per_capita_cols = [
+            "cumulative_reported_cases",
+            "cumulative_deaths",
+            "current_hospitalizations",
+        ]
 
         # Multiply column by N, then at end divide by aggregated N
         pop_mean_cols = ["case_reporting_rate", "R_eff", "doubling_t"]
@@ -353,22 +365,24 @@ if __name__ == "__main__":
 
             per_cap_dict = {}
             for col in per_capita_cols:
-                per_cap_dict[col+"_per_100k"] = (q_df[col] / q_df["total_population"]) * 100000.0
+                per_cap_dict[col + "_per_100k"] = (
+                    q_df[col] / q_df["total_population"]
+                ) * 100000.0
             q_df = q_df.assign(**per_cap_dict)
             q_df = divide_by_pop(q_df, pop_mean_cols)
 
             # Column management
-            #if level != admin2_key:
+            # if level != admin2_key:
             del q_df[admin2_key]
 
-            if 'adm2' in q_df.columns and level != 'adm2':
-                del q_df['adm2']
+            if "adm2" in q_df.columns and level != "adm2":
+                del q_df["adm2"]
 
-            if 'adm1' in q_df.columns and level != 'adm1':
-                del q_df['adm1']
+            if "adm1" in q_df.columns and level != "adm1":
+                del q_df["adm1"]
 
-            if 'adm0' in q_df.columns and level != 'adm0':
-                del q_df['adm0']
+            if "adm0" in q_df.columns and level != "adm0":
+                del q_df["adm0"]
 
             if verbose:
                 logging.info("\nQuantiles dataframe:")
@@ -378,7 +392,12 @@ if __name__ == "__main__":
             write_queue.put((os.path.join(output_dir, level + "_quantiles.csv"), q_df))
 
     pool = Pool(processes=args.nprocs)
-    for _ in tqdm.tqdm(pool.imap_unordered(_process_date, dates), total=len(dates), desc="Postprocessing dates", dynamic_ncols=True):
+    for _ in tqdm.tqdm(
+        pool.imap_unordered(_process_date, dates),
+        total=len(dates),
+        desc="Postprocessing dates",
+        dynamic_ncols=True,
+    ):
         pass
     pool.close()
     pool.join()  # wait until everything is done
@@ -395,13 +414,13 @@ if __name__ == "__main__":
             logging.info("Sorting output file " + fname + "...")
             df = pd.read_csv(fname)
 
-            #TODO we can avoid having to set index here once readable_column names is complete 
+            # TODO we can avoid having to set index here once readable_column names is complete
             df.set_index([level, "date", "quantile"], inplace=True)
             # sort rows by index
             df.sort_index(inplace=True)
             # sort columns alphabetically
             df = df.reindex(sorted(df.columns), axis=1)
             # write out sorted csv
-            df.drop(columns='index', inplace=True) # TODO where did we pick this up?
+            df.drop(columns="index", inplace=True)  # TODO where did we pick this up?
             df.to_csv(fname, index=True)
             logging.info("Done sort")

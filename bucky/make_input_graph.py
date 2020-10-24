@@ -93,7 +93,11 @@ def get_case_history(historical_data, end_date, num_days=DAYS_OF_HIST):
         "Getting " + str(num_days) + " days of case/death data for each county..."
     )
 
-    for fips, group in tqdm.tqdm(historical_data.groupby("adm2"), desc="Grabbing adm2 histories", dynamic_ncols=True):
+    for fips, group in tqdm.tqdm(
+        historical_data.groupby("adm2"),
+        desc="Grabbing adm2 histories",
+        dynamic_ncols=True,
+    ):
 
         # Get block of data
         block = group.loc[(group["date"] >= start_date) & (group["date"] <= end_date)]
@@ -255,13 +259,16 @@ def read_lex_data(date):
 
     """
     # Check if a preprocessed version already exists
-    cache_file = bucky_cfg["data_dir"] + "/mobility/preprocessed/county_lex_" + date + ".csv.gz"
+    cache_file = (
+        bucky_cfg["data_dir"] + "/mobility/preprocessed/county_lex_" + date + ".csv.gz"
+    )
     if os.path.exists(cache_file):
         df_long = pd.read_csv(cache_file)
         logging.info("Using cached lex data for " + str(date))
     else:
         df = pd.read_csv(
-            bucky_cfg["data_dir"] + "/mobility/COVIDExposureIndices/lex_data/county_lex_"
+            bucky_cfg["data_dir"]
+            + "/mobility/COVIDExposureIndices/lex_data/county_lex_"
             + date
             + ".csv.gz",
             compression="gzip",
@@ -282,7 +289,12 @@ def read_lex_data(date):
         if not os.path.exists(bucky_cfg["data_dir"] + "/mobility/preprocessed"):
             os.makedirs(bucky_cfg["data_dir"] + "/mobility/preprocessed")
 
-        df_long.to_csv(bucky_cfg["data_dir"] + "/mobility/preprocessed/county_lex_" + date + ".csv.gz")
+        df_long.to_csv(
+            bucky_cfg["data_dir"]
+            + "/mobility/preprocessed/county_lex_"
+            + date
+            + ".csv.gz"
+        )
 
     return df_long
 
@@ -306,7 +318,9 @@ def get_lex(last_date, window_size=7):
     lex_df = None
     success = 0
     d = 0
-    pbar = tqdm.tqdm(total=window_size, desc='Getting historical LEX', dynamic_ncols=True)
+    pbar = tqdm.tqdm(
+        total=window_size, desc="Getting historical LEX", dynamic_ncols=True
+    )
     while success < window_size:
         date = datetime.date.fromisoformat(last_date) - datetime.timedelta(days=d)
         date_str = date.isoformat()
@@ -357,7 +371,9 @@ def get_safegraph(last_date, window_size=7):
     sg_df = None
     success = 0
     d = 0
-    pbar = tqdm.tqdm(total=window_size, desc='Getting historical SG', dynamic_ncols=True)
+    pbar = tqdm.tqdm(
+        total=window_size, desc="Getting historical SG", dynamic_ncols=True
+    )
     while success < window_size:
 
         date = datetime.date.fromisoformat(last_date) - datetime.timedelta(days=d)
@@ -366,13 +382,19 @@ def get_safegraph(last_date, window_size=7):
         try:
             if sg_df is None:
                 sg_df = pd.read_csv(
-                    bucky_cfg["data_dir"] + "/safegraph_processed/" + date_str + "_county.csv.gz"
+                    bucky_cfg["data_dir"]
+                    + "/safegraph_processed/"
+                    + date_str
+                    + "_county.csv.gz"
                 )
                 sg_df.set_index(["origin", "dest"], inplace=True)
                 sg_df.rename(columns={"count": date_str}, inplace=True)
             else:
                 tmp_df = pd.read_csv(
-                    bucky_cfg["data_dir"] + "/safegraph_processed/" + date_str + "_county.csv.gz"
+                    bucky_cfg["data_dir"]
+                    + "/safegraph_processed/"
+                    + date_str
+                    + "_county.csv.gz"
                 )
                 tmp_df.set_index(["origin", "dest"], inplace=True)
                 tmp_df.rename(columns={"count": date_str}, inplace=True)
@@ -635,7 +657,15 @@ if __name__ == "__main__":
         data[col] = data[col].fillna(0.0)
 
     data = data[
-        ["adm2", "adm1", "cumulative_reported_cases", "cumulative_deaths", "pop_dens", "geometry", "NAMELSAD"]
+        [
+            "adm2",
+            "adm1",
+            "cumulative_reported_cases",
+            "cumulative_deaths",
+            "pop_dens",
+            "geometry",
+            "NAMELSAD",
+        ]
     ]
     data = data.rename(columns={"NAMELSAD": "adm2_name"})
 
@@ -671,7 +701,12 @@ if __name__ == "__main__":
     # Create edges
     logging.info("Creating edges...")
     edges = []
-    for index, row in tqdm.tqdm(data.iterrows(), total=len(data), desc='Creating neighboring edges', dynamic_ncols=True):
+    for index, row in tqdm.tqdm(
+        data.iterrows(),
+        total=len(data),
+        desc="Creating neighboring edges",
+        dynamic_ncols=True,
+    ):
 
         # Determine which counties touch
         neighbors = data[data.geometry.touches(row["geometry"])].adm2.to_numpy()
@@ -747,7 +782,12 @@ if __name__ == "__main__":
     G2.update(nodes=G.nodes(data=True))
 
     logging.info("Finalizing edge weights...")
-    for u, v, d in tqdm.tqdm(G.edges(data=True), total=len(G.edges), desc='Finalizing edges', dynamic_ncols=True):
+    for u, v, d in tqdm.tqdm(
+        G.edges(data=True),
+        total=len(G.edges),
+        desc="Finalizing edges",
+        dynamic_ncols=True,
+    ):
 
         G2[u][v]["weight"] += d["weight"]
         if (u, v) in move_dict:

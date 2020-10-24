@@ -4,6 +4,7 @@ import contextlib
 import copy
 import importlib
 import logging
+
 # import lz4.frame
 import lzma  # lzma is slow but reallllly gets that file size down...
 import os
@@ -94,6 +95,7 @@ def unpack_cache(cache_file):
         os.makedirs(os.path.dirname(new_file), exist_ok=True)
         with open(new_file, "wb") as f:
             f.write(tmp[fname])
+
 
 def _banner():
     print(r" ____             _          ")

@@ -79,7 +79,7 @@ def read_geoid_from_graph(graph_file=None):
     # Deal with DC if in US
     if admin0_name == "US":
         df.loc[11001.0, "adm1_name"] = "District of Columbia"
-    
+
     df.reset_index(inplace=True)
     return df
 

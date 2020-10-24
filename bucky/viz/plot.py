@@ -16,10 +16,11 @@ from ..util.read_config import bucky_cfg
 from ..util.readable_col_names import readable_col_names
 from .geoid import read_geoid_from_graph, read_lookup
 
-import matplotlib # isort:skip
-matplotlib.rc("axes.formatter", useoffset=False) # isort:skip
-import matplotlib.pyplot as plt # isort:skip
-from matplotlib.ticker import StrMethodFormatter # isort:skip
+import matplotlib  # isort:skip
+
+matplotlib.rc("axes.formatter", useoffset=False)  # isort:skip
+import matplotlib.pyplot as plt  # isort:skip
+from matplotlib.ticker import StrMethodFormatter  # isort:skip
 
 
 plt.style.use("ggplot")
@@ -88,7 +89,8 @@ parser.add_argument(
     "--min_hist",
     default=0,
     type=int,
-    help="Minimum number of historical data points to plot.")
+    help="Minimum number of historical data points to plot.",
+)
 
 # Pass in a specific historical start date and historical file
 parser.add_argument(
@@ -146,19 +148,14 @@ parser.add_argument(
     help="Size of window (in days) to apply to historical data",
 )
 
+
 def interval(mean, sem, conf, N):
     z = scipy.stats.t.ppf((1 + conf) / 2.0, N - 1)
     return (mean - sem * z).clip(lower=0.0), mean + sem * z
 
 
 def plot(
-    output_dir,
-    lookup_df,
-    key,
-    sim_data,
-    hist_data,
-    plot_columns,
-    quantiles,
+    output_dir, lookup_df, key, sim_data, hist_data, plot_columns, quantiles,
 ):
     """Given a dataframe and a key, creates plots with requested columns.
 
@@ -214,7 +211,12 @@ def plot(
     else:
         unique_areas = unique_lookup_areas
 
-    for area in tqdm.tqdm(unique_areas, total=len(unique_areas), desc="Plotting " + key, dynamic_ncols=True):
+    for area in tqdm.tqdm(
+        unique_areas,
+        total=len(unique_areas),
+        desc="Plotting " + key,
+        dynamic_ncols=True,
+    ):
 
         # Get name
         name = lookup_df.loc[lookup_df[key] == area][key + "_name"].values[0]
@@ -293,19 +295,30 @@ def plot(
                     # actuals.set_index('date', inplace=True)
                     hist_label = "Historical " + readable_col_names[plot_columns[i]]
                     actuals.plot(
-                        x="date", y=plot_columns[i], ax=axs[i], color="r", marker="o", ls="", label=hist_label
+                        x="date",
+                        y=plot_columns[i],
+                        ax=axs[i],
+                        color="r",
+                        marker="o",
+                        ls="",
+                        label=hist_label,
                     )
 
                     # Set xlim
                     axs[i].set_xlim(actuals["date"].min(), dates.max())
                     # axs[i].scatter(actual_dates[ind:], actual_vals[ind:], label='Historical data', color='b')
                 else:
-                    logging.warning("Historical data missing for area: " + name + ", column=" + plot_columns[i])
+                    logging.warning(
+                        "Historical data missing for area: "
+                        + name
+                        + ", column="
+                        + plot_columns[i]
+                    )
 
             axs[i].grid(True)
             axs[i].legend()
             axs[i].set_ylabel("Count")
-            #axs[i].yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+            # axs[i].yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
 
         plot_filename = os.path.join(
             output_dir, readable_col_names[plot_columns[0]] + "_" + name + ".png"
@@ -415,19 +428,21 @@ def make_plots(
         if plot_hist:
 
             # Get historical data for requested columns
-            hist_data = get_historical_data(plot_columns, level, lookup_df, window_size, hist_file)
-            
+            hist_data = get_historical_data(
+                plot_columns, level, lookup_df, window_size, hist_file
+            )
+
             # Check if historical data was not successfully fetched
             if hist_data is None:
-                logging.warning("No historical data could be found for: " + str(hist_columns))
-                
+                logging.warning(
+                    "No historical data could be found for: " + str(hist_columns)
+                )
+
             else:
                 hist_data.reset_index(inplace=True)
 
                 # Drop data not within requested time range
-                hist_data = hist_data.assign(
-                    date=pd.to_datetime(hist_data["date"])
-                )
+                hist_data = hist_data.assign(date=pd.to_datetime(hist_data["date"]))
 
                 if hist_start is not None:
                     start_date = hist_start
@@ -438,11 +453,12 @@ def make_plots(
 
                 # Shift start date if necessary
                 if num_points < min_hist_points:
-                    start_date = last_hist_date - pd.Timedelta(str(min_hist_points) + ' days')
+                    start_date = last_hist_date - pd.Timedelta(
+                        str(min_hist_points) + " days"
+                    )
 
                 hist_data = hist_data.loc[
-                    (hist_data["date"] < end_date)
-                    & (hist_data["date"] > start_date)
+                    (hist_data["date"] < end_date) & (hist_data["date"] > start_date)
                 ]
         plot(
             output_dir=plot_dir,
@@ -521,5 +537,5 @@ if __name__ == "__main__":
         hist_file,
         min_hist,
         args.adm1_name,
-        hist_start
+        hist_start,
     )
