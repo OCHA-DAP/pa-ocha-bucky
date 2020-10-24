@@ -5,20 +5,22 @@ import os
 import pickle
 import sys
 
-import matplotlib # isort:skip
-matplotlib.rc("axes.formatter", useoffset=False) # isort:skip
-import matplotlib.pyplot as plt # isort:skip
-from matplotlib.ticker import StrMethodFormatter # isort:skip
 import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.stats
 import tqdm
 
-from ..util.read_config import bucky_cfg
 from ..util.get_historical_data import get_historical_data
+from ..util.read_config import bucky_cfg
 from ..util.readable_col_names import readable_col_names
 from .geoid import read_geoid_from_graph, read_lookup
+
+import matplotlib # isort:skip
+matplotlib.rc("axes.formatter", useoffset=False) # isort:skip
+import matplotlib.pyplot as plt # isort:skip
+from matplotlib.ticker import StrMethodFormatter # isort:skip
+
 
 plt.style.use("ggplot")
 

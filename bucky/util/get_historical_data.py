@@ -1,5 +1,6 @@
 import logging
 import os
+
 import numpy as np
 import pandas as pd
 
@@ -162,4 +163,3 @@ if __name__ == "__main__":
     for level in levels:
 
         df = get_historical_data(cols, level, look, 7)
-

@@ -7,8 +7,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from ..util.read_config import bucky_cfg
 from ..util import remove_chars
+from ..util.read_config import bucky_cfg
+
 
 def read_geoid_from_graph(graph_file=None):
     """Creates a dataframe relating geographic administration levels, 

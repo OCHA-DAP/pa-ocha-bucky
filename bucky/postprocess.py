@@ -7,16 +7,8 @@ import os
 import pickle
 from datetime import timedelta
 from functools import partial
-from multiprocessing import (
-    JoinableQueue,
-    Pool,
-    Process,
-    Queue,
-    RLock,
-    cpu_count,
-    current_process,
-    set_start_method,
-)
+from multiprocessing import (JoinableQueue, Pool, Process, Queue, RLock,
+                             cpu_count, current_process, set_start_method)
 from pathlib import Path
 
 import networkx as nx
@@ -25,10 +17,9 @@ import pandas as pd
 import scipy.stats
 import tqdm
 
+from .numerical_libs import use_cupy
 from .util.read_config import bucky_cfg
 from .viz.geoid import read_geoid_from_graph, read_lookup
-
-from .numerical_libs import use_cupy
 
 
 def divide_by_pop(dataframe, cols):
