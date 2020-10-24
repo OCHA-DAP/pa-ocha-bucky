@@ -349,6 +349,7 @@ class SEIR_covid(object):
                 )
 
                 self.adm1_current_cfr = xp.zeros((self.adm1_max + 1,), dtype=float)
+
                 cfr_delay = 20  # TODO this should be calced from D_REPORT_TIME*Nij
                 # TODO make a function that will take a 'floating point index' and return the fractional part of the non int (we do this multiple other places while reading over historical data, e.g. case_hist[-Ti:] during init)
 
@@ -421,6 +422,17 @@ class SEIR_covid(object):
             # )  # TODO this should be in par file (its from planning scenario5)
             # self.params.F = xp.clip(self.params.F * ifr_scale, 0.0, 1.0)
             # self.params.F_old = self.params.F.copy()
+        if (
+            self.use_G_ifr
+        ):  # TODO this is pretty much overwriteen with the CHR rescale...
+            self.ifr[xp.isnan(self.ifr)] = 0.0
+            self.params.F = self.ifr / self.params["SYM_FRAC"]
+            adm0_ifr = xp.sum(self.ifr * self.Nij) / xp.sum(self.Nj)
+            ifr_scale = (
+                0.0065 / adm0_ifr
+            )  # TODO this should be in par file (its from planning scenario5)
+            self.params.F = xp.clip(self.params.F * ifr_scale, 0.0, 1.0)
+            self.params.F_old = self.params.F.copy()
 
             # TODO this needs to be cleaned up BAD
             # should add a util function to do the rollups to adm1 (it shows up in case_reporting/doubling t calc too)
@@ -482,7 +494,7 @@ class SEIR_covid(object):
                 size=self.doubling_t.shape,
                 a_min=1e-6,
             )
-            self.doubling_t = xp.clip(self.doubling_t, 1.0, None)
+            self.doubling_t = xp.clip(self.doubling_t, 1.0, None) / 2.0
 
         self.params = self.bucky_params.rescale_doubling_rate(
             self.doubling_t, self.params, xp, self.A
@@ -580,7 +592,7 @@ class SEIR_covid(object):
 
             # TODO this .85 should be in param file...
             self.params["F_eff"] = xp.clip(
-                self.params["F"] / self.params["H"], 0.0, 1.0
+                0.85 * self.params["F"] / self.params["H"], 0.0, 1.0
             )
 
             y[Ii] = (1.0 - self.params.H) * I_init / len(Ii)
@@ -594,6 +606,7 @@ class SEIR_covid(object):
                 * self.params.GAMMA_H
                 / self.params.THETA
                 / Rhn
+                * 0.85
             )
 
         y[Si] -= xp.sum(y[Ii], axis=0) + xp.sum(y[Ici], axis=0) + xp.sum(y[Rhi], axis=0)
