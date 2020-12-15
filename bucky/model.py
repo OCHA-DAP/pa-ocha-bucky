@@ -492,14 +492,14 @@ class SEIR_covid:
             self.params.H = xp.clip(H_fac * self.params.H * adm2_hosp_frac[None, :], self.params.F, 1.0)
 
             # TODO this .85 should be in param file...
-            self.params["F_eff"] = xp.clip(0.7 * self.params["F"] / self.params["H"], 0.0, 1.0)
+            self.params["F_eff"] = xp.clip(self.params.scaling_F * self.params["F"] / self.params["H"], 0.0, 1.0)
 
             yy.I = (1.0 - self.params.H) * I_init / yy.Im
             # y[Ici] = ic_frac * self.params.H * I_init / (len(Ici))
             # y[Rhi] = hosp_frac * self.params.H * I_init / (Rhn)
             yy.Ic = self.params.CASE_REPORT * self.params.H * I_init / yy.Im
             yy.Rh = (
-                0.7
+                self.params.scaling_F
                 * self.params.CASE_REPORT
                 * self.params.H
                 * I_init

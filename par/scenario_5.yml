@@ -11,6 +11,8 @@ consts:
   case_reporting_min_deaths: 100.
   case_reporting_N_historical_days: 14
 
+  scaling_F: 0.7
+
 Tg:
   # Mean generation interval
   mean: 7.
